@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VoIP Server", "VoIP Server\VoIP Server.csproj", "{3DE9FBA4-D127-45A7-B2E3-A4DC2602BFC8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3DE9FBA4-D127-45A7-B2E3-A4DC2602BFC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DE9FBA4-D127-45A7-B2E3-A4DC2602BFC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DE9FBA4-D127-45A7-B2E3-A4DC2602BFC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DE9FBA4-D127-45A7-B2E3-A4DC2602BFC8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5EECBA0A-C529-47DC-8937-234BAB0BD6D7}
+	EndGlobalSection
+EndGlobal
