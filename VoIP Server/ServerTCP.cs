@@ -23,18 +23,15 @@ namespace VoIP_Server
             _server = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
             _server.Start();
             _isRunning = true;
+
+            LoopClients();
         }
 
         public void LoopClients()
         {
             while (_isRunning)
             {
-                // wait for client connection;
                 TcpClient newClient = _server.AcceptTcpClient();
-                //vs[0] = newClient;
-                //vs[1] = rooms;
-                // client found.
-                // create a thread to handle communication
 
                 Thread t = new Thread(unused =>
                 {
@@ -44,74 +41,125 @@ namespace VoIP_Server
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e);
                         Console.WriteLine("Client has disconnected due to error");
-                        newClient.Close();
                     }
                 });
                 t.Start();
             }
         }
 
+        static string Hash(string password)
+        {
+            using (SHA1Managed sha1 = new SHA1Managed())
+            {
+                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(password));
+                var sb = new StringBuilder(hash.Length * 2);
+
+                foreach (byte b in hash)
+                {
+                    sb.Append(b.ToString("X2"));
+                }
+
+                return sb.ToString();
+            }
+        }
+
         public void HandleClient(TcpClient client)
         {
             NetworkStream stream = client.GetStream();
+            CommProtocol.setAes(stream);
 
             bool clientConnected = true;
+            DatabaseConn dc = new DatabaseConn();
+            bool logged = false;
+            string playerID = "";
+
 
             while (clientConnected)
             {
-                string userID;
-                string sData = "";
-
-                try
+                do
                 {
-                    sData = CommProtocol.Read(stream);
-                }
-                catch (Exception e)
-                {
-                    sData = "exit";
-                }
-                string[] logData = CommProtocol.CheckMessage(sData);
-
-
-                if (sData == "exit")
-                {
-                    clientConnected = false;
-                }
-                else if (logData[0] == "user")
-                {
-                    userID = logData[1];
-                    lock (loggedUsers)
+                    string sData = CommProtocol.Read(stream);
+                    Console.WriteLine(sData);
+                    string[] logData = CommProtocol.CheckMessage(sData);
+                    if (logData[0] == "log")
                     {
-                        loggedUsers.Add(userID);
+                        if (!loggedUsers.Contains(logData[1]))
+                        {
+                            if (dc.checkUserData(logData[1], Hash(logData[1] + logData[2])))
+                            {
+
+                                Console.WriteLine("user logged");
+                                CommProtocol.Write(stream, "log ok");
+                                logged = true;
+                                lock (loggedUsers)
+                                {
+                                    loggedUsers.Add(playerID);
+                                }
+                            }
+                            else
+                            {
+                                CommProtocol.Write(stream, "error wrong_credentials");
+                                Console.WriteLine("wrong login data");
+                            }
+                        }
+                        else CommProtocol.Write(stream, "error already_logged_in");
                     }
-                    CommProtocol.Write(stream, "ok");
-                }
-                else if (logData[0] == "ref")
-                {
-                    StringBuilder sb = new StringBuilder();
-                    sb.Append(loggedUsers.Count);
-                    foreach (var user in loggedUsers)
+                    else if (logData[0] == "reg")
                     {
-                        //sb.Append(room.Encode());
+                        if (dc.registerUser(logData[1], Hash(logData[1] + logData[2])))
+                        {
+                            CommProtocol.Write(stream, "reg ok");
+                        }
+                        else CommProtocol.Write(stream, "error login_already_used");
                     }
-                    CommProtocol.Write(stream, sb.ToString());
-                }
-                else if (logData[0] == "call")
+                    else Console.WriteLine("wrong command");
+                } while (!logged);
+
+                while (logged)
                 {
+                    string sData = "";
+                    try
+                    {
+                        sData = CommProtocol.Read(stream);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Logging out player " + playerID + " due to error");
+                        sData = "logout";
+                    }
+                    Console.WriteLine(sData);
+                    string[] logData = CommProtocol.CheckMessage(sData);
 
-                }
-                else if (logData[0] == "hangup")
-                {
+                    if (sData == "logout")
+                    {
+                        logged = false;
+                        clientConnected = false;
+                        lock (loggedUsers)
+                        {
+                            loggedUsers.Remove(playerID);
+                        }
+                    }
+                    else if (logData[0] == "ref")
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append("ref ");
+                        CommProtocol.Write(stream, sb.ToString());
+                    }
+                    else if (logData[0] == "chngpass")
+                    {
+                        dc.editUserPassword(logData[1], Hash(logData[1] + logData[2]));
+                        CommProtocol.Write(stream, "ok");
+                    }
+                    else if (logData[0] == "delacc")
+                    {
+                        dc.deleteUser(logData[1], Hash(logData[1] + logData[2]));
+                        CommProtocol.Write(stream, "ok");
+                    }
+                    else if (logData[0] == "call")
+                    {
 
-                }
-                else if (logData[0] == "pickup")
-                {
-
-                }
-                else if (logData[0] == "reject")
-
+                    }
                 }
             }
         }
